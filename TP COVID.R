@@ -21,7 +21,7 @@
 
 ## load up the packages we will need:
 pacman::p_load(readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet,
-               broom, broom.mixed)
+               broom, broom.mixed, leaps)
 
 
 ## ---------------------------
@@ -257,3 +257,67 @@ binomial_regression(model7, data_trim_COVID_2)
 # -1.268 + 1.118 * 0 = -1.268. Donc, pour deux personnes covid -, nous nous 
 # attendons à ce qu’une personne >= 65 ans soit -1.268 moins elevé qu’une
 # personne < 65 ans.
+# 
+# Pour personnes en covid +, cependant, l’effet de l'âge est de -1.268 + 1.118 * 1 = - 0.15.
+# Ainsi, pour deux personnes covid +, une personne >= 65 ans devrait être avoir un
+# titre ELISA de -0.15 qu’une personne < 65 ans.
+# 
+# En raison de l’interaction, l’effet d’avoir plus de 65 ans est différent
+# si une personne est covid + ou covid -.
+# Une autre façon de dire cela est que les pentes des droites de régression
+# entre la l'ELISA et l'age sont différentes pour les différentes catégories de covid.
+# B3 indique à quel point ces pentes sont différentes.
+
+anova(binomial_regression(model6, data_trim_COVID_2),
+      binomial_regression(model7, data_trim_COVID_2),
+      test = "LRT"
+      )
+# Likelihood Ratio Test : on veut le AIC ou le BIC le plus petit
+# Le plus petit, le meilleur model !
+
+# Meilleur subset possible
+regsubsets.out <- regsubsets(response ~ predictor,
+             data = data,
+             nbest = 1,      # 1 best model for each number of predictors
+             nvmax = NULL,   # NULL for no limit on number of variables
+             force.in = NULL, force.out = NULL,
+             method = "exhaustive")
+summary_best_subset <- summary(regsubsets.out)
+
+as.data.frame(summary_best_subset$outmat)
+which.max(summary_best_subset$adjr2)
+summary_best_subset$which[,]
+}
+
+Best_Subset <- function(data, response, max_num_predictors) {
+  predictors <- names(data)
+  predictors <- predictors[predictors != response]
+  n <- nrow(data)
+  best_model <- NULL
+  best_AIC <- Inf
+  best_predictors <- NULL
+  for (i in 1:max_num_predictors) {
+    model <- NULL
+    best_AIC_i <- Inf
+    best_predictors_i <- NULL
+    for (j in predictors) {
+      if (is.null(model)) {
+        model <- j
+      } else {
+        model <- paste(model, j, sep = "+")
+      }
+      AIC <- AIC(lm(as.formula(paste(response, "~", model)), data = data))
+      if (AIC < best_AIC_i) {
+        best_AIC_i <- AIC
+        best_predictors_i <- model
+      }
+    }
+    if (best_AIC_i < best_AIC) {
+      best_AIC <- best_AIC_i
+      best_predictors <- best_predictors_i
+      best_model <- glm(as.formula(paste(response, "~", best_predictors)), data = data)
+    }
+    predictors <- predictors[predictors != best_predictors_i]
+  }
+  return(best_model)
+}

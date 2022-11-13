@@ -1,4 +1,5 @@
-pacman::p_load(readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet, broom, broom.mixed)
+pacman::p_load(readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet, broom, broom.mixed,
+               leaps)
 
 data_COVID <- read_delim("D:/M2 - SMSDS/M2 SMSDS/Modèles linéaires généralisés, modèles mixtes/Cours/TP-20221111/dataset1_smsds_import_raw.csv", ";", escape_double = FALSE, trim_ws = TRUE)
 
