@@ -47,6 +47,13 @@ dim(data_)
 # Trim NA values in the database
 data_trim_ <- na.omit(data_)
 
+# split data into train and test
+set.seed(123)
+smp_size <- floor(0.80 * nrow(data_COVID))
+train_ind <- sample(seq_len(nrow(data_COVID)), size = smp_size)
+train <- data_COVID[train_ind, ]
+test <- data_COVID[-train_ind, ]
+
 # Function for Linear Regression
 linear_regression <- function(formula, data){
   model <- lm(formula = formula, data = data)
