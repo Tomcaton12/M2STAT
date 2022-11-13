@@ -20,7 +20,8 @@
 ## ---------------------------
 
 ## load up the packages we will need:
-pacman::p_load(tictoc, readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet)
+pacman::p_load(readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet,
+               broom, broom.mixed)
 
 
 ## ---------------------------
@@ -34,9 +35,16 @@ pacman::p_load(tictoc, readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet)
 # Function for Linear Regression
 linear_regression <- function(formula, data){
   model <- lm(formula = formula, data = data)
-  summary(model)
+  # summary(model)
+  return(model)
 }
 
+# Function for Binomial Regression
+binomial_regression <- function(formula, data){
+  model <- glm(formula = formula, data = data, family = "binomial")
+  # summary(model)
+  return(model)
+}
 
 ##%######################################################%##
 #                                                          #
@@ -218,3 +226,34 @@ xtabs(~ age_65 + elisa_2, data_trim_COVID_2)
 # |- On observe, 548 patients supérieur a 65 ans qui n'ont pas le covid
 # |- On observe, 9 patients supérieur a 65 ans qui ont pas le covid
 
+binomial_regression(model5, data_trim_COVID_2)
+# |- Age augmente de 1 an après 65 ans, le titre de l'ELISA diminue en moyenne de 0.9288
+plogis(binomial_regression(model5, data_trim_COVID_2)$coefficients[1])
+# |- logit-estimates returned by binomial glm, which can be transformed into probabilities
+plogis(sum(binomial_regression(model5, data_trim_COVID_2)$coefficients))
+# |- Le Risque Absolue (Probabilité de l'Elisa +) chez les >= 65 ans est estimé à 0.016
+exp(binomial_regression(model5, data_trim_COVID_2)$coefficients[2])
+tidy(binomial_regression(model5, data_trim_COVID_2), conf.int = TRUE, exponentiate = TRUE)
+# |- Le Risque Absolue (Probabilité de l'ELISA +), chez les < 65 ans est estimé à 0.395
+# # |- L'Odds Ratio à un age de >= 65 ans est estimé à 0.395
+
+binomial_regression(model6, data_trim_COVID_2)
+binomial_regression(model7, data_trim_COVID_2)
+# |- Model 7 Avec Interraction (AI) : https://www.theanalysisfactor.com/interpreting-interactions-in-regression/#:~:text=Adding%20an%20interaction%20term%20to,for%20different%20values%20of%20Sun.
+# L’ajout d’un terme d’interaction à un modèle modifie radicalement
+# l’interprétation de tous les coefficients. Sans terme d’interaction, 
+# nous interprétons B1 comme l’effet unique de l'âge sur le titre de l'ELISA.
+# Mais l’interaction signifie que l’effet de l'âge sur l'ELISA est différent
+# pour différentes valeurs du covid.
+# Ainsi, l’effet unique de l'age sur l'ELISA ne se limite pas à B1. Cela dépend
+# également des valeurs de B3 et du covid. L’effet unique de l'age est représenté
+# par tout ce qui est multiplié par l'age dans le modèle: B1 + B3 * covid.
+# B1 est maintenant interprété comme l’effet unique de l'age sur l'ELISA uniquement
+# lorsque covid = 0.
+# 
+# L’ajout du terme d’interaction a modifié les valeurs de B1 et B2.
+# L’effet de l'âge sur l'ELISA est maintenant de -1.268 + 1.118 * covid.
+# Pour l'elisa en lorsque Covid -, covid = 0, donc l’effet de l'âge est de
+# -1.268 + 1.118 * 0 = -1.268. Donc, pour deux personnes covid -, nous nous 
+# attendons à ce qu’une personne >= 65 ans soit -1.268 moins elevé qu’une
+# personne < 65 ans.

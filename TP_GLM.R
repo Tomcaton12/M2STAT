@@ -1,4 +1,4 @@
-pacman::p_load(readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet)
+pacman::p_load(readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet, broom, broom.mixed)
 
 data_COVID <- read_delim("D:/M2 - SMSDS/M2 SMSDS/Modèles linéaires généralisés, modèles mixtes/Cours/TP-20221111/dataset1_smsds_import_raw.csv", ";", escape_double = FALSE, trim_ws = TRUE)
 
@@ -129,12 +129,6 @@ LogisticRegression <- function(data, formula){
 # Scatter plot of the regression
 plot(data_$_, data_$_)
 
-# Encodage d'une variable en 3 classes avec un ordre et une baseline
-data_$_ <- ifelse(data_$_ >= 1.1, "pos", ifelse(data_$_ > 0.8, "dou", "neg"))
-data_$_ <- factor(data_$_, levels = c("neg", "dou", "pos"), labels = c("négatif", "douteux", "positif"))
-data_$_ <- relevel(data_$_, "négatif")
-data_$_ <- relevel(data_$_, "douteux")
-ordered(data_$)
 
 # Encodage d'une variable en 2 classes binaire
 data_ <- data_originale |> 
@@ -145,10 +139,6 @@ data_ <- data_originale |>
     )
   )
 
-model_1 <- elisa ~ I(age/10)
-model_2 <- log10(elisa) ~ I(age/10)
-model_3 <- log2(elisa) ~ I(age/10)
-model_4 <- log(elisa) ~ I(age/10)
 
 ##%######################################################%##
 #                                                          #
