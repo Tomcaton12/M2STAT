@@ -21,7 +21,7 @@
 
 ## load up the packages we will need:
 pacman::p_load(readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet,
-               broom, broom.mixed, leaps)
+               broom, broom.mixed, leaps, DataEditR)
 
 
 ## ---------------------------
@@ -112,8 +112,16 @@ train_ind_3 <- sample(seq_len(nrow(data_trim_COVID_3)), size = smp_size_3)
 train_3 <- data_trim_COVID_3[train_ind_3, ]
 test_3 <- data_trim_COVID_3[-train_ind_3, ]
 
+## filter and sort the dataset
+COVID_2 <- data_trim_COVID_2 %>%
+  select(sexe, age, elisa_2, age20)
+register("COVID_2", "data_trim_COVID_2")
+dtab(COVID_2, dec = 2, nr = 100) %>% render()
 
-##%######################################################%##
+## change variable type
+COVID_2 <- mutate_at(COVID_2, .vars = vars(sexe), .funs = as_factor)
+# 
+# ##%######################################################%##
 #                                                          #
 ####                        Plot                        ####
 #                                                          #
@@ -273,11 +281,11 @@ anova(binomial_regression(model6, data_trim_COVID_2),
       test = "LRT"
       )
 # Likelihood Ratio Test : on veut le AIC ou le BIC le plus petit
-# Le plus petit, le meilleur model !
+# Le plus petit, le meilleur model ! Non significatif ici
 
 # Meilleur subset possible
-regsubsets.out <- regsubsets(response ~ predictor,
-             data = data,
+regsubsets.out <- regsubsets(elisa_2 ~ .,
+             data = COVID_2,
              nbest = 1,      # 1 best model for each number of predictors
              nvmax = NULL,   # NULL for no limit on number of variables
              force.in = NULL, force.out = NULL,
@@ -306,7 +314,7 @@ Best_Subset <- function(data, response, max_num_predictors) {
       } else {
         model <- paste(model, j, sep = "+")
       }
-      AIC <- AIC(lm(as.formula(paste(response, "~", model)), data = data))
+      AIC <- AIC(glm(as.formula(paste(response, "~", model)), data = data))
       if (AIC < best_AIC_i) {
         best_AIC_i <- AIC
         best_predictors_i <- model
@@ -321,3 +329,36 @@ Best_Subset <- function(data, response, max_num_predictors) {
   }
   return(best_model)
 }
+
+binomial_regression(model8, data_trim_COVID_2)
+binomial_regression(model9, data_trim_COVID_2)
+anova(binomial_regression(model8, data_trim_COVID_2),
+      binomial_regression(model9, data_trim_COVID_2),
+      test = "LRT") # pareil que "Chisq" |- model9 meilleur
+
+Best_Subset(COVID_2, "elisa_2", 3)
+
+drop1(binomial_regression(model10, data_trim_COVID_2), test = "LRT")
+
+# Comparaison de model non emboité : utiliser anova() et regarder AIC / BIC
+
+# Ecriture binomial et pivot_wider
+# binomial_data <- function(data, response, covar1, covar2){
+dat_bin <- data_trim_COVID_2 %>%
+  filter(!is.na(elisa_2)) %>% 
+  count(age_65, covid, elisa_2) %>% 
+  pivot_wider(names_from = elisa_2, values_from = n)
+
+dat_outcomes <- tibble(
+  pos = dat_bin[, 4],
+  neg = dat_bin[, 3]
+) %>% 
+  as.matrix()
+
+dat_covar <- tibble(
+  age_65 = dat_bin[, 1],
+  covid = dat_bin[, 2]
+) %>% 
+  as.matrix()
+
+

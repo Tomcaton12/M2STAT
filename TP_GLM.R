@@ -1,5 +1,5 @@
 pacman::p_load(readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet, broom, broom.mixed,
-               leaps)
+               leaps, DataEditR)
 
 data_COVID <- read_delim("D:/M2 - SMSDS/M2 SMSDS/Modèles linéaires généralisés, modèles mixtes/Cours/TP-20221111/dataset1_smsds_import_raw.csv", ";", escape_double = FALSE, trim_ws = TRUE)
 
@@ -139,6 +139,54 @@ data_ <- data_originale |>
       var < 1.1 ~ 0
     )
   )
+
+# Meilleur subset possible
+regsubsets.out <- regsubsets(response ~ predictor,
+                             data = data,
+                             nbest = 1,      # 1 best model for each number of predictors
+                             nvmax = NULL,   # NULL for no limit on number of variables
+                             force.in = NULL, force.out = NULL,
+                             method = "exhaustive")
+summary_best_subset <- summary(regsubsets.out)
+
+as.data.frame(summary_best_subset$outmat)
+which.max(summary_best_subset$adjr2)
+summary_best_subset$which[,]
+
+
+Best_Subset <- function(data, response, max_num_predictors) {
+  predictors <- names(data)
+  predictors <- predictors[predictors != response]
+  n <- nrow(data)
+  best_model <- NULL
+  best_AIC <- Inf
+  best_predictors <- NULL
+  for (i in 1:max_num_predictors) {
+    model <- NULL
+    best_AIC_i <- Inf
+    best_predictors_i <- NULL
+    for (j in predictors) {
+      if (is.null(model)) {
+        model <- j
+      } else {
+        model <- paste(model, j, sep = "+")
+      }
+      AIC <- AIC(lm(as.formula(paste(response, "~", model)), data = data))
+      if (AIC < best_AIC_i) {
+        best_AIC_i <- AIC
+        best_predictors_i <- model
+      }
+    }
+    if (best_AIC_i < best_AIC) {
+      best_AIC <- best_AIC_i
+      best_predictors <- best_predictors_i
+      best_model <- glm(as.formula(paste(response, "~", best_predictors)), data = data)
+    }
+    predictors <- predictors[predictors != best_predictors_i]
+  }
+  return(best_model)
+}
+
 
 
 ##%######################################################%##
