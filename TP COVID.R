@@ -21,7 +21,7 @@
 
 ## load up the packages we will need:
 pacman::p_load(readr, readxl, tidyverse, glmmTMB, lme4, lmerTest, nnet,
-               broom, broom.mixed, leaps, DataEditR)
+               broom, broom.mixed, leaps, DataEditR, MASS, VGAM)
 
 
 ## ---------------------------
@@ -120,6 +120,10 @@ dtab(COVID_2, dec = 2, nr = 100) %>% render()
 
 ## change variable type
 COVID_2 <- mutate_at(COVID_2, .vars = vars(sexe), .funs = as_factor)
+
+# add column data_trim_COVID_3$elisa_3 to data_trim_COVID_2
+data_trim_COVID_2 <- data_trim_COVID_2 %>% 
+  bind_cols(elisa_3 = data_trim_COVID_3$elisa_3)
 # 
 # ##%######################################################%##
 #                                                          #
@@ -193,6 +197,7 @@ model4 <- log(elisa) ~ I(age/10)
 # Models emboites 5, 6 et 7 (10?) | 8 et 9
 model5 <- elisa_2 ~ age_65
 model6 <- elisa_2 ~ age_65 + covid
+model_6.5 <- dat_outcomes ~ dat_covar, binomial
 model7 <- elisa_2 ~ age_65 * covid
 
 model8 <- elisa_2 ~ covid
@@ -362,3 +367,9 @@ dat_covar <- tibble(
   as.matrix()
 
 
+# Multinomial regression
+library(MASS)
+summary(multinom(elisa_3 ~ age_65 + covid, data = data_trim_COVID_2))
+# Chaque coefficient estime l'effet par rapport à la catégorie négative.
+# Les résultats sont proches de ceux qu'on aurait obtenu sur des modèles comparant
+# 2 a 2, mais on a ici une vraisemblance pour l'ensemble du modèle !
